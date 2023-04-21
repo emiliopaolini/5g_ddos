@@ -26,14 +26,14 @@ class packet_features:
     def __str__(self):
         return "{} -> {}".format(self.id_fwd,self.features_list)
 
-def process_pcap(pcap_file, in_labels, max_flow_len, labelled_flows, max_flows=0, traffic_type='all', time_window=TIME_WINDOW):
+def process_pcap(pcap_file, max_flow_len, max_flows=0, traffic_type='all', time_window=TIME_WINDOW):
     start_time = time.time()
     temp_dict = OrderedDict()
 
     start_time_window = -1
     
     cap = pyshark.FileCapture(pcap_file)
-
+    labelled_flows = []
     for i, pkt in enumerate(cap):
         if i % 1000 == 0:
             print(pcap_file + " packet #", i)
@@ -48,8 +48,8 @@ def process_pcap(pcap_file, in_labels, max_flow_len, labelled_flows, max_flows=0
             tmp_id[2] = str(pkt.ip.dst)  # int(ipaddress.IPv4Address(pkt.ip.dst))
             
 
-            pf.features_list.append(pkt.sniff_timestamp) # timestamp
-            pf.features_list.append(pkt.ip.len) # len packet
+            pf.features_list.append(float(pkt.sniff_timestamp)) # timestamp
+            pf.features_list.append(int(pkt.ip.len)) # len packet
             pf.features_list.append(int(hashlib.sha256(str(pkt.highest_layer).encode('utf-8')).hexdigest(),16) % 10 ** 8) # highest layer encoded as number 
             pf.features_list.append(int(int(pkt.ip.flags, 16))) # base 16, ip flags
             protocols = vector_proto.transform([pkt.frame_info.protocols]).toarray().tolist()[0] # dense vector containing 1 when protocol is present
@@ -87,7 +87,10 @@ def process_pcap(pcap_file, in_labels, max_flow_len, labelled_flows, max_flows=0
             pf.id_bwd = (tmp_id[2], tmp_id[3], tmp_id[0], tmp_id[1], tmp_id[4])
         except AttributeError as e:
             print("Error in parsing packet")
-        print(pf)
+            continue
+        #print(pf)
+
+
         # store packet
 
         if pf.id_fwd in temp_dict and start_time_window in temp_dict[pf.id_fwd] and \
@@ -107,8 +110,39 @@ def process_pcap(pcap_file, in_labels, max_flow_len, labelled_flows, max_flows=0
                 temp_dict[pf.id_fwd][start_time_window] = np.array([pf.features_list])
             elif pf.id_bwd in temp_dict and start_time_window not in temp_dict[pf.id_bwd]:
                 temp_dict[pf.id_bwd][start_time_window] = np.array([pf.features_list])
-        if i == 2:
-            print(temp_dict)
-            exit(1)
+        if max_flows > 0 and len(temp_dict) >= max_flows:
+            break
 
-process_pcap(FILENAME, None, None, None)
+    
+
+        
+    # apply label
+        
+    for five_tuple, flow in temp_dict.items():
+    # flow
+        if five_tuple[0]=="10.155.15.0" and five_tuple[2]=="10.41.150.68":
+            flow['label'] = 1
+        else: 
+            flow['label'] = 0
+        labelled_flows.append((five_tuple, flow))
+
+    count_good = 0
+    count_bad = 0
+
+    for i,j in labelled_flows:
+  
+        if j['label']==0:
+            count_good += 1
+            #print(i) 
+            #print(j)
+        else:
+            count_bad += 1
+    print("total good: "+str(count_good))
+    print("total bad: "+str(count_bad))
+    return labelled_flows
+
+flows = process_pcap(pcap_file = FILENAME, max_flow_len= MAX_FLOW_LEN)
+
+with open('slow_loris.data', 'wb') as filehandle:
+            # store the data as binary data stream
+            pickle.dump(flows, filehandle)
