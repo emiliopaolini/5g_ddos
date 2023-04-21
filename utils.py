@@ -25,7 +25,7 @@ feature_list = OrderedDict([
 )
 
 # min/max values of features based on the nominal min/max values of the single features (as defined in the feature_list dict)
-def static_min_max(time_window=10):
+def static_min_max(time_window=TIME_WINDOW):
     feature_list['timestamp'][1] = time_window
 
     min_array = np.zeros(len(feature_list))
@@ -41,8 +41,6 @@ def static_min_max(time_window=10):
 
 def scale_linear_bycolumn(rawpoints, mins,maxs,high=1.0, low=0.0):
     rng = maxs - mins
-    print("in scaling")
-    print(high - (((high - low) * (maxs - rawpoints)) / rng))
     return high - (((high - low) * (maxs - rawpoints)) / rng)
     
 
@@ -53,13 +51,11 @@ def normalize_and_padding(X,mins,maxs,max_flow_len,padding=True):
             sample = sample[:max_flow_len,...]
         packet_nr = sample.shape[0] # number of packets in one sample
 
-        print(sample)
         norm_sample = scale_linear_bycolumn(sample, mins, maxs, high=1.0, low=0.0)
         np.nan_to_num(norm_sample, copy=False)  # remove NaN from the array
         if padding == True:
             norm_sample = np.pad(norm_sample, ((0, max_flow_len - packet_nr), (0, 0)), 'constant',constant_values=(0, 0))  # padding
         norm_X.append(norm_sample)
-        exit(1)
     return norm_X
 
 def count_packets_in_dataset(X_list):

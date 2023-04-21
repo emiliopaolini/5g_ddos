@@ -88,17 +88,16 @@ print(np.unique(y,return_counts=True))
 
 
 # normalization and padding
-mins,maxs = static_min_max(time_window=TIME_WINDOW)
+mins,maxs = static_min_max()
 
-print("Before normalization")
+#print("Before normalization")
 #print(X[0][0][0])
 
 #print(X[0].shape)
 
 X = normalize_and_padding(X, mins, maxs, MAX_FLOW_LEN)
-print("After normalization")
-print(X[0][0][0])
-print(X[0].shape)
+#print("After normalization")
+print("Length of dataset: {}".format(len(X)))
 
 #packets = count_packets_in_dataset(norm_X_full)
 #log_string = time.strftime("%Y-%m-%d %H:%M:%S") + " | total_flows (tot,ben,ddos):(" + str(total_flows) + "," + str(benign_flows) + "," + str(ddos_flows) + \
