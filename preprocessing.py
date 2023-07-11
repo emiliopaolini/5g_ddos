@@ -13,6 +13,8 @@ for file in filelist:
         # read the data as binary data stream
             preprocessed_flows = preprocessed_flows + pickle.load(filehandle)
 
+
+
 def count_flows(preprocessed_flows):
     ddos_flows = 0
     total_flows = len(preprocessed_flows)
