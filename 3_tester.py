@@ -110,7 +110,6 @@ def main() -> None:
     model = load_model('file_results_'+str(args.flow_length)+'/'+args.architecture+".h5")
      
     print(lq.models.summary(model))
-    exit()
     print(model.summary())
     
     plt.plot(history['accuracy'])
