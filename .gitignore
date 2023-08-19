@@ -1,2 +1,14 @@
 *.pcapng
 __pycache__/*
+pcap_files/*
+file_results_10/*
+file_results_50/*
+file_results_100/*
+data_file_10/*
+data_file_50/*
+data_file_100/*
+pictures_50/*
+pictures_100/*
+data_10.hkl
+data_50.hkl
+data_100.hkl

@@ -3,9 +3,6 @@ import numpy as np
 from collections import OrderedDict
 
 SEED = 1
-FILENAME = "Slowloris_BS1_nogtp.pcapng"
-TIME_WINDOW = 10
-MAX_FLOW_LEN = 10
 protocols = ['arp','data','dns','ftp','http','icmp','ip','ssdp','ssl','telnet','tcp','udp']
 powers_of_two = np.array([2**i for i in range(len(protocols))])
 
@@ -13,6 +10,7 @@ powers_of_two = np.array([2**i for i in range(len(protocols))])
 feature_list = OrderedDict([
     ('timestamp', [0,10]),
     ('packet_length',[0,1<<16]),
+    ('ttl',[0,1<<8]),
     ('highest_layer',[0,1<<32]),
     ('IP_flags',[0,1<<16]),
     ('protocols',[0,1<<len(protocols)]),
@@ -24,8 +22,25 @@ feature_list = OrderedDict([
     ('ICMP_type',[0,1<<8])]
 )
 
+def find_min_max(X,time_window=10):
+    sample_len = X[0].shape[1]
+    max_array = np.zeros((1,sample_len))
+    min_array = np.full((1, sample_len),np.inf)
+
+    for feature in X:
+        temp_feature = np.vstack([max_array,feature])
+        max_array = np.amax(temp_feature,axis=0)
+        temp_feature = np.vstack([min_array, feature])
+        min_array = np.amin(temp_feature, axis=0)
+
+    # flows cannot last for more than MAX_FLOW_DURATION seconds, so they are normalized accordingly
+    #max_array[0] = time_window
+    #min_array[0] = 0
+
+    return min_array,max_array
+
 # min/max values of features based on the nominal min/max values of the single features (as defined in the feature_list dict)
-def static_min_max(time_window=TIME_WINDOW):
+def static_min_max(time_window):
     feature_list['timestamp'][1] = time_window
 
     min_array = np.zeros(len(feature_list))
@@ -51,7 +66,7 @@ def normalize_and_padding(X,mins,maxs,max_flow_len,padding=True):
             sample = sample[:max_flow_len,...]
         packet_nr = sample.shape[0] # number of packets in one sample
 
-        norm_sample = scale_linear_bycolumn(sample, mins, maxs, high=1.0, low=0.0)
+        norm_sample = scale_linear_bycolumn(sample, mins, maxs, high=1.0, low=-1.0)
         np.nan_to_num(norm_sample, copy=False)  # remove NaN from the array
         if padding == True:
             norm_sample = np.pad(norm_sample, ((0, max_flow_len - packet_nr), (0, 0)), 'constant',constant_values=(0, 0))  # padding
